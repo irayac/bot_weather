@@ -1,9 +1,19 @@
 import requests
 import datetime
-from pprint import pprint
-from config import open_weather_token
+from config import tg_bot_token, open_weather_token
+from aiogram import Bot, types
+from aiogram.dispatcher import Dispatcher
+from aiogram.utils import executor
 
-def get_weather(city, open_weather_token):
+bot = Bot(token=tg_bot_token)
+dispatcher = Dispatcher(bot)
+
+@dispatcher.message_handler(commands=["start"])
+async def start_command(message: types.Message):
+    await message.reply('Привет! Напиши название города, я пришлю сводку погоды')
+
+@dispatcher.message_handler()
+async def get_weather(message: types.Message):
     code_to_smile = {
         "Clear": "Ясно \U00002600",
         "Clouds": "Облачно \U00002601",
@@ -15,10 +25,9 @@ def get_weather(city, open_weather_token):
     }
     try:
         url = requests.get(
-            f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={open_weather_token}&units=metric"
+            f"https://api.openweathermap.org/data/2.5/weather?q={message.text}&appid={open_weather_token}&units=metric"
         )
         data = url.json()
-        #pprint(data)
 
         city = data["name"]
         cur_weather = data["main"]["temp"]
@@ -37,7 +46,7 @@ def get_weather(city, open_weather_token):
         len_day = datetime.datetime.fromtimestamp(data["sys"]["sunset"]) - datetime.datetime.fromtimestamp(
             data["sys"]["sunrise"])
 
-        print(f'***{datetime.datetime.now()}***\n'
+        await message.reply(f'***{datetime.datetime.now()}***\n'
               f'Погода в городе: {city}\n'
               f'Температура: {cur_weather} С°{wd}\n'
               f'Влажность: {humidity}\n'
@@ -49,13 +58,10 @@ def get_weather(city, open_weather_token):
               f'Желаю вам Хорошего дня!')
 
 
-    except Exception as ex:
-        print(ex)
-        print('Проверьте название города')
+    except:
+        await message.reply('Проверьте название города')
 
-def main():
-    city = input('Введите город: ')
-    get_weather(city,open_weather_token)
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    executor.start_polling(dispatcher)
+
